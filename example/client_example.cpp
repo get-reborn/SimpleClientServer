@@ -18,11 +18,11 @@ int main() {
         return -1;
     }
     SocketClient client;
+    char *msg = new char[65537 * 20];
     if (SocketClient::initClient(client, "127.0.0.1", 23414) == 0) {
         if (client.connect("127.0.0.1", 8080) == 0) {
             // send message
-            char *msg = new char[65537 * 20];
-            client.send(msg, sizeof(msg));
+            client.send(msg, 65537 * 20);
             Sleep(300);
             // receive message
             char *rcvMsg = new char[100];
@@ -31,6 +31,7 @@ int main() {
         }
     }
     // clear up Socket lib
+    delete msg;
     WSACleanup();
     return 0;
 }

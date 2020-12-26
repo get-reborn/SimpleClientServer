@@ -44,7 +44,7 @@ public:
      * @param port the port to link
      * @return success: 0 | fail: -1
      */
-    int initServer(SocketServer &server, const char *ipAddr, unsigned short port);
+    static int initServer(SocketServer &server, const char *ipAddr, unsigned short port);
 
     /**
      * @brief send the msg to all connect client

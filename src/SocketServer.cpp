@@ -35,7 +35,7 @@ int SocketServer::initServer(SocketServer &server, const char *ipAddr, unsigned 
 
 int SocketServer::sendToAll(char *buf, int len) {
     for (int i = 0; i < acceptedClients.size(); i++) {
-        if(sendToOne(i, buf, len) == -1) {
+        if (sendToOne(i, buf, len) == -1) {
             errexit("can't send to one\n");
             return -1;
         }
@@ -43,11 +43,11 @@ int SocketServer::sendToAll(char *buf, int len) {
 }
 
 int SocketServer::sendToOne(int id, char *buf, int len) {
-    if(id > acceptedClients.size()) {
+    if (id > acceptedClients.size()) {
         errexit("size out of vector \n");
         return -1;
     }
-    accepted_client acc_client= acceptedClients[id];
+    accepted_client acc_client = acceptedClients[id];
     if (acc_client.aSocket == INVALID_SOCKET) {
         errexit("can't send entry: %d\n", GetLastError());
         return -1;
@@ -72,14 +72,13 @@ int SocketServer::sendToOne(int id, char *buf, int len) {
     }
     return 0;
 }
-}
 
 int SocketServer::recvFromOne(int id, char *buf, int len) {
-    if(id > acceptedClients.size()) {
+    if (id > acceptedClients.size()) {
         errexit("size out of vector \n");
         return -1;
     }
-    accepted_client acc_client= acceptedClients[id];
+    accepted_client acc_client = acceptedClients[id];
     if (acc_client.aSocket == INVALID_SOCKET) {
         errexit("can't recv entry: %d\n", GetLastError());
         return -1;
@@ -97,7 +96,7 @@ int SocketServer::recvFromOne(int id, char *buf, int len) {
 int SocketServer::accept() {
     accepted_client accClient;
     int len = sizeof(accClient);
-    accClient.aSocket = ::accept(this->sSocket, (struct sockaddr*)&accClient.sSin, &len);
+    accClient.aSocket = ::accept(this->sSocket, (struct sockaddr *) &accClient.sSin, &len);
     if (accClient.aSocket == INVALID_SOCKET) {
         errexit("accept failed: %d\n", GetLastError());
         return -1;
@@ -107,12 +106,12 @@ int SocketServer::accept() {
 }
 
 int SocketServer::detach(int id) {
-    if(id > acceptedClients.size()) {
+    if (id > acceptedClients.size()) {
         errexit("size out of vector \n");
         return -1;
     }
     accepted_client accClient = acceptedClients[id];
-    if(::close(accClient.aSocket) == -1) {
+    if (::close(accClient.aSocket) == -1) {
         errexit("can't close socket: %d\n", GetLastError());
         return -1;
     }
@@ -124,8 +123,8 @@ int SocketServer::detach(int id) {
 }
 
 int SocketServer::clean() {
-    for(accepted_client accClient : acceptedClients) {
-        if(::close(accClient.aSocket) == -1) {
+    for (accepted_client accClient : acceptedClients) {
+        if (::close(accClient.aSocket) == -1) {
             errexit("can't close socket: %d\n", GetLastError());
             return -1;
         }
@@ -160,7 +159,7 @@ int SocketServer::ipAndPort2Sin(const char *ipAddr, unsigned short port, SOCKADD
 }
 
 int SocketServer::createTcpSocket() {
-    if (this->sSocket = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP) == INVALID_SOCKET) {
+    if ((this->sSocket = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP)) == INVALID_SOCKET) {
         errexit("can't create socket: %d\n", GetLastError());
         return -1;
     }
