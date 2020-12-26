@@ -90,7 +90,6 @@ int SocketServer::recvFromOne(int id, char *buf, int len) {
     } else {
         return 0;
     }
-    return 0;
 }
 
 int SocketServer::accept() {

@@ -16,3 +16,11 @@ target_link_libraries(server_example
         ${SIMPLE_LIB_NAME}
         )
 
+add_executable(client_server_example
+        client_server_example.cpp)
+
+# FIND_PACKAGE(Threads)
+
+target_link_libraries(client_server_example
+        ${SIMPLE_LIB_NAME}
+        )

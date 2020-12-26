@@ -31,6 +31,7 @@ int main(int argc, char **argv)
         }
     }
     // clear up Socket lib
+    delete msg;
     WSACleanup();
     return 0;
 }

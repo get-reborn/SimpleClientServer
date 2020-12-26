@@ -21,7 +21,9 @@ int SocketClient::initClient(SocketClient &client, const char *ipAddr, unsigned 
         return -1;
     }
     // bind the address and socket
-    client.bind();
+    if (client.bind() == -1) {
+        return -1;
+    }
     return 0;
 }
 
@@ -92,7 +94,7 @@ int SocketClient::recv(char *buf, int len) const {
 }
 
 int SocketClient::createTcpSocket() {
-    if (this->cSocket = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP) == INVALID_SOCKET) {
+    if ((this->cSocket = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP)) == INVALID_SOCKET) {
         errexit("can't create socket: %d\n", GetLastError());
         return -1;
     }
