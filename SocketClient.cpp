@@ -2,19 +2,23 @@
 // Created by re-get on 2020/12/26.
 //
 
+#include <io.h>
 #include "SocketClient.h"
 
+SocketClient::~SocketClient() {
+    close();
+}
 
 int SocketClient::initClient(SocketClient &client, const char *ipAddr, unsigned short port) {
     if (client.cSocket == INVALID_SOCKET) {
-        if (client.createTcpSocket(client.cSocket) == -1) {
+        if (client.createTcpSocket() == -1) {
             return -1;
         }
     }
     if (client.ipAndPort2Sin(ipAddr, port, client.localSin) == -1) {
         return -1;
     }
-    client.bind(client.cSocket, client.localSin);
+    client.bind();
 }
 
 int SocketClient::connect() {
@@ -35,7 +39,12 @@ int SocketClient::connect(const char *ipAddr, unsigned short port) {
     return 0;
 }
 
-int SocketClient::send(char *buf, int len) {
+int SocketClient::close() const {
+    ::close(this->cSocket);
+    return 0;
+}
+
+int SocketClient::send(char *buf, int len) const {
     if (cSocket == INVALID_SOCKET) {
         errexit("can't send entry %d\n", GetLastError());
         return -1;
@@ -61,7 +70,7 @@ int SocketClient::send(char *buf, int len) {
     return 0;
 }
 
-int SocketClient::recv(char *buf, int len) {
+int SocketClient::recv(char *buf, int len) const {
     if (cSocket == INVALID_SOCKET) {
         errexit("can't recv entry %d\n", GetLastError());
         return -1;
@@ -75,12 +84,12 @@ int SocketClient::recv(char *buf, int len) {
     }
 }
 
-int SocketClient::createTcpSocket(SOCKET &cSocket) {
-    cSocket = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
+int SocketClient::createTcpSocket() {
+    this->cSocket = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
 }
 
-int SocketClient::bind(SOCKET &socket, SOCKADDR_IN &sin) {
-    if(::bind(socket, (struct sockaddr *) &sin, sizeof(sin)) == SOCKET_ERROR) {
+int SocketClient::bind() {
+    if (::bind(this->cSocket, (struct sockaddr *) &this->localSin, sizeof(this->localSin)) == SOCKET_ERROR) {
         errexit("can't bind %d\n", GetLastError());
         return -1;
     }

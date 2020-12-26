@@ -19,7 +19,7 @@ public:
         memset(&this->sSin, 0, sizeof(this->sSin));
     };
 
-    ~SocketClient() {};
+    ~SocketClient() ;
 
 
     static int initClient(SocketClient &client, const char *ipAddr, unsigned short port);
@@ -34,12 +34,17 @@ public:
     int connect(const char *ipAddr, unsigned short port);
 
     /**
+     * @brief close the socket
+     * @return
+     */
+    int close() const;
+    /**
      * @brief send the message to server
      * @param buf: message address
      * @param len: message length
      * @return success: 0 | fail: -1
      */
-    int send(char *buf, int len);
+    int send(char *buf, int len) const;
 
     /**
      * @brief recv the message from server
@@ -47,7 +52,7 @@ public:
      * @param len: message length
      * @return success: 0 | fail: -1
      */
-    int recv(char *buf, int len);
+    int recv(char *buf, int len) const;
 
 private:
     SOCKET cSocket; // Client Socket
@@ -60,7 +65,7 @@ private:
      * @param socket: a new TCP SOCKET
      * @return: success: 0 | fail: -1
      */
-    int createTcpSocket(SOCKET &cSocket);
+    int createTcpSocket();
 
     /**
      * @brief bind a IP address and port to a SOCKET
@@ -68,7 +73,7 @@ private:
      * @param sin: the IP address and port
      * @return: success: 0 | fail: -1
      */
-    int bind(SOCKET &socket, SOCKADDR_IN &sin);
+    int bind();
 
     /**
      * @brief covert a IP address and port to a new SOCKADDR_IN
@@ -77,7 +82,7 @@ private:
      * @param sin: new SOCKADDR_IN
      * @return: a SOCKADDR_IN
      */
-    int ipAndPort2Sin(const char *ipAddr, unsigned short port, SOCKADDR_IN &sin);
+    static int ipAndPort2Sin(const char *ipAddr, unsigned short port, SOCKADDR_IN &sin);
 
 };
 
