@@ -5,6 +5,12 @@
 #ifndef SIMPLECLIENTSERVER_SOCKETERR_H
 #define SIMPLECLIENTSERVER_SOCKETERR_H
 
-#endif //SIMPLECLIENTSERVER_SOCKETERR_H
 
+
+/**
+ * @brief a common socket err msg in program
+ * @param ...
+ */
 void errexit(const char *, ...);
+
+#endif //SIMPLECLIENTSERVER_SOCKETERR_H

@@ -19,14 +19,13 @@ public:
         memset(&this->sSin, 0, sizeof(this->sSin));
     };
 
-    ~SocketClient() ;
+    ~SocketClient();
 
 
     static int initClient(SocketClient &client, const char *ipAddr, unsigned short port);
 
     /**
      * @brief connect this client to server address
-     * @param sSin: the address about server
      * @return success: 0 | fail: -1
      */
     int connect();
@@ -38,6 +37,7 @@ public:
      * @return
      */
     int close() const;
+
     /**
      * @brief send the message to server
      * @param buf: message address
@@ -54,27 +54,6 @@ public:
      */
     int recv(char *buf, int len) const;
 
-private:
-    SOCKET cSocket; // Client Socket
-    SOCKADDR_IN localSin; // Client Addr
-    SOCKADDR_IN sSin; // Server Addr
-    CONST int BUFF_SIZE = 1024 * 64;
-
-    /**
-     * @brief create a TCP SOCKET
-     * @param socket: a new TCP SOCKET
-     * @return: success: 0 | fail: -1
-     */
-    int createTcpSocket();
-
-    /**
-     * @brief bind a IP address and port to a SOCKET
-     * @param socket: the socket to bind
-     * @param sin: the IP address and port
-     * @return: success: 0 | fail: -1
-     */
-    int bind();
-
     /**
      * @brief covert a IP address and port to a new SOCKADDR_IN
      * @param ipAddr: the IP address to covert
@@ -84,6 +63,23 @@ private:
      */
     static int ipAndPort2Sin(const char *ipAddr, unsigned short port, SOCKADDR_IN &sin);
 
+private:
+    SOCKET cSocket; // Client Socket
+    SOCKADDR_IN localSin; // Client Addr
+    SOCKADDR_IN sSin; // Server Addr
+    CONST int BUFF_SIZE = 1024 * 64;
+
+    /**
+     * @brief create a TCP SOCKET
+     * @return: success: 0 | fail: -1
+     */
+    int createTcpSocket();
+
+    /**
+     * @brief bind a IP address and port to a SOCKET
+     * @return: success: 0 | fail: -1
+     */
+    int bind();
 };
 
 

@@ -1,0 +1,11 @@
+include_directories(
+        ${CURRENT_PROJECT_DIR}/inc
+)
+
+add_executable(client_example
+        client_example.cpp
+        )
+target_link_libraries(client_example
+        ${SIMPLE_LIB_NAME}
+        )
+

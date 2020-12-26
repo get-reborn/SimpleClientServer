@@ -22,56 +22,70 @@
 
 using namespace std;
 
-#define MAXPACKETSIZE 40960
-#define MAX_CLIENT 1000
-//#define CODA_MSG 4
+struct accepted_client {
+    int id;
+    SOCKET aSocket;
+    SOCKADDR_IN sSin;
 
-struct descript_socket {
-    int socket = -1;
-    string ip = "";
-    int id = -1;
-    std::string message;
-    bool enable_message_runtime = false;
+    accepted_client() {
+        id = -1;
+        aSocket = INVALID_SOCKET;
+        memset(&sSin, 0, sizeof(sSin));
+    }
+
 };
 
 class SocketServer {
 public:
-    int setup(int port, vector<int> opts = vector<int>());
+    SocketServer() {}
 
-    vector<descript_socket *> getMessage();
+    ~SocketServer() {
+        close();
+    }
 
-    void accepted();
+    int initServer(SocketServer &server, const char *ipAddr, unsigned short port);
 
-    void Send(string msg, int id);
+    int sendToAll(const char *msg, int len);
 
-    void detach(int id);
+    int sendToOne(accepted_client &client, const char *msg, int len);
 
-    void clean(int id);
+    int recvFromOne(accepted_client &client, const char *msg, int len);
 
-    bool is_online();
+    int accepted();
 
-    string get_ip_addr(int id);
+    int detach(int id);
 
-    int get_last_closed_sockets();
+    int clean(int id);
 
-    void closed();
+    int close();
+    /**
+     * @brief covert a IP address and port to a new SOCKADDR_IN
+     * @param ipAddr: the IP address to covert
+     * @param port: the port to covert
+     * @param sin: new SOCKADDR_IN
+     * @return: a SOCKADDR_IN
+     */
+    static int ipAndPort2Sin(const char *ipAddr, unsigned short port, SOCKADDR_IN &sin);
 
 private:
-    int sockfd, n, pid;
-    struct sockaddr_in serverAddress;
-    struct sockaddr_in clientAddress;
-    pthread_t serverThread[MAX_CLIENT];
+    CONST static int BUFF_SIZE = 1024 * 64;
+    CONST static int MAX_CLIENT = 1000;
+    SOCKET sSocket; // Server Socket
+    SOCKADDR_IN localSin; // Client Addr
+    vector<accepted_client> acceptedClients;
+    pthread_t  serverThread[ MAX_CLIENT ];
 
-    static vector<descript_socket *> newsockfd;
-    static char msg[MAXPACKETSIZE];
-    static vector<descript_socket *> Message;//[CODA_MSG];
+    /**
+    * @brief create a TCP SOCKET
+    * @return: success: 0 | fail: -1
+    */
+    int createTcpSocket();
 
-    static bool isonline;
-    static int last_closed;
-    static int num_client;
-    static std::mutex mt;
-
-    static void *Task(void *argv);
+    /**
+     * @brief bind a IP address and port to a SOCKET
+     * @return: success: 0 | fail: -1
+     */
+    int bind();
 };
 
 #endif //SIMPLECLIENTSERVER_SOCKETSERVER_H

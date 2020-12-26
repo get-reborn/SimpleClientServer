@@ -23,7 +23,7 @@ int SocketClient::initClient(SocketClient &client, const char *ipAddr, unsigned 
 
 int SocketClient::connect() {
     if (::connect(this->cSocket, (struct sockaddr *) &sSin, sizeof(sSin)) == SOCKET_ERROR) {
-        errexit("can't connect to server %d\n", GetLastError());
+        errexit("can't connect to server: %d\n", GetLastError());
         return -1;
     }
     return 0;
@@ -46,24 +46,24 @@ int SocketClient::close() const {
 
 int SocketClient::send(char *buf, int len) const {
     if (cSocket == INVALID_SOCKET) {
-        errexit("can't send entry %d\n", GetLastError());
+        errexit("can't send entry: %d\n", GetLastError());
         return -1;
     }
     if (len <= BUFF_SIZE) {
         if (::send(cSocket, buf, len, 0) == SOCKET_ERROR) {
-            errexit("can't send entry %d\n", GetLastError());
+            errexit("can't send entry: %d\n", GetLastError());
             return -1;
         }
     } else {
         int idx = 0;
         for (; idx < len - BUFF_SIZE; idx += BUFF_SIZE) {
             if (::send(cSocket, buf + idx, BUFF_SIZE, 0) == SOCKET_ERROR) {
-                errexit("can't send entry %d\n", GetLastError());
+                errexit("can't send entry: %d\n", GetLastError());
                 return -1;
             }
         }
         if (::send(cSocket, buf + idx, len - idx, 0) == SOCKET_ERROR) {
-            errexit("can't send entry %d\n", GetLastError());
+            errexit("can't send entry: %d\n", GetLastError());
             return -1;
         }
     }
@@ -72,12 +72,12 @@ int SocketClient::send(char *buf, int len) const {
 
 int SocketClient::recv(char *buf, int len) const {
     if (cSocket == INVALID_SOCKET) {
-        errexit("can't recv entry %d\n", GetLastError());
+        errexit("can't recv entry: %d\n", GetLastError());
         return -1;
     }
     memset(buf, 0, len);
     if (::recv(cSocket, buf, len, 0) == SOCKET_ERROR) {
-        errexit("can't recv entry %d\n", GetLastError());
+        errexit("can't recv entry: %d\n", GetLastError());
         return -1;
     } else {
         return 0;
@@ -90,7 +90,7 @@ int SocketClient::createTcpSocket() {
 
 int SocketClient::bind() {
     if (::bind(this->cSocket, (struct sockaddr *) &this->localSin, sizeof(this->localSin)) == SOCKET_ERROR) {
-        errexit("can't bind %d\n", GetLastError());
+        errexit("can't bind address: %d\n", GetLastError());
         return -1;
     }
     return 0;
