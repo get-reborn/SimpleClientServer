@@ -1,0 +1,14 @@
+//
+// Created by re-get on 2020/12/26.
+//
+
+#ifndef SIMPLECLIENTSERVER_SOCKETSERVER_H
+#define SIMPLECLIENTSERVER_SOCKETSERVER_H
+
+
+class SocketServer {
+
+};
+
+
+#endif //SIMPLECLIENTSERVER_SOCKETSERVER_H
