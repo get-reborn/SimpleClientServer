@@ -10,15 +10,19 @@ SocketClient::~SocketClient() {
 }
 
 int SocketClient::initClient(SocketClient &client, const char *ipAddr, unsigned short port) {
+    // create socket if socket invalid
     if (client.cSocket == INVALID_SOCKET) {
         if (client.createTcpSocket() == -1) {
             return -1;
         }
     }
+    // covert ip and port to SOCKADDR_IN
     if (client.ipAndPort2Sin(ipAddr, port, client.localSin) == -1) {
         return -1;
     }
+    // bind the address and socket
     client.bind();
+    return 0;
 }
 
 int SocketClient::connect() {
@@ -40,29 +44,32 @@ int SocketClient::connect(const char *ipAddr, unsigned short port) {
 }
 
 int SocketClient::close() const {
-    ::close(this->cSocket);
+    if(::close(this->cSocket) == -1){
+        errexit("can't close socket: %d\n", GetLastError());
+        return -1;
+    }
     return 0;
 }
 
 int SocketClient::send(char *buf, int len) const {
-    if (cSocket == INVALID_SOCKET) {
+    if (this->cSocket == INVALID_SOCKET) {
         errexit("can't send entry: %d\n", GetLastError());
         return -1;
     }
     if (len <= BUFF_SIZE) {
-        if (::send(cSocket, buf, len, 0) == SOCKET_ERROR) {
+        if (::send(this->cSocket, buf, len, 0) == SOCKET_ERROR) {
             errexit("can't send entry: %d\n", GetLastError());
             return -1;
         }
     } else {
         int idx = 0;
         for (; idx < len - BUFF_SIZE; idx += BUFF_SIZE) {
-            if (::send(cSocket, buf + idx, BUFF_SIZE, 0) == SOCKET_ERROR) {
+            if (::send(this->cSocket, buf + idx, BUFF_SIZE, 0) == SOCKET_ERROR) {
                 errexit("can't send entry: %d\n", GetLastError());
                 return -1;
             }
         }
-        if (::send(cSocket, buf + idx, len - idx, 0) == SOCKET_ERROR) {
+        if (::send(this->cSocket, buf + idx, len - idx, 0) == SOCKET_ERROR) {
             errexit("can't send entry: %d\n", GetLastError());
             return -1;
         }
@@ -85,7 +92,11 @@ int SocketClient::recv(char *buf, int len) const {
 }
 
 int SocketClient::createTcpSocket() {
-    this->cSocket = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
+    if (this->cSocket = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP) == INVALID_SOCKET) {
+        errexit("can't create socket: %d\n", GetLastError());
+        return -1;
+    }
+    return 0;
 }
 
 int SocketClient::bind() {

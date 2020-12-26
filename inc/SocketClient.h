@@ -9,10 +9,11 @@
 #include "SocketErr.h"
 
 /**
- * @brief a simple tcp client
+ * @brief a simple server client
  */
 class SocketClient {
 public:
+    // todo(add factory methods)
     SocketClient() {
         this->cSocket = INVALID_SOCKET;
         memset(&this->localSin, 0, sizeof(this->localSin));
@@ -21,7 +22,13 @@ public:
 
     ~SocketClient();
 
-
+    /**
+     * @brief init the tcp client by IP address and port
+     * @param client the client to init
+     * @param ipAddr the ip address to link
+     * @param port the port to link
+     * @return success: 0 | fail: -1
+     */
     static int initClient(SocketClient &client, const char *ipAddr, unsigned short port);
 
     /**
@@ -65,8 +72,8 @@ public:
 
 private:
     SOCKET cSocket; // Client Socket
-    SOCKADDR_IN localSin; // Client Addr
-    SOCKADDR_IN sSin; // Server Addr
+    SOCKADDR_IN localSin{}; // Client Addr
+    SOCKADDR_IN sSin{}; // Server Addr
     CONST int BUFF_SIZE = 1024 * 64;
 
     /**

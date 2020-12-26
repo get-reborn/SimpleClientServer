@@ -1,134 +1,184 @@
-#include <ws2tcpip.h>
 #include "SocketServer.h"
 
-char SocketServer::msg[MAXPACKETSIZE];
-int SocketServer::num_client;
-int SocketServer::last_closed;
-bool SocketServer::isonline;
-vector<descript_socket *> SocketServer::Message;
-vector<descript_socket *> SocketServer::newsockfd;
-std::mutex SocketServer::mt;
-
-void *SocketServer::Task(void *arg) {
-    int n;
-    struct descript_socket *desc = (struct descript_socket *) arg;
-    pthread_detach(pthread_self());
-
-    cerr << "open client[ id:" << desc->id << " ip:" << desc->ip << " socket:" << desc->socket << " send:"
-         << desc->enable_message_runtime << " ]" << endl;
-    while (1) {
-        n = recv(desc->socket, msg, MAXPACKETSIZE, 0);
-        if (n != -1) {
-            if (n == 0) {
-                isonline = false;
-                cerr << "close client[ id:" << desc->id << " ip:" << desc->ip << " socket:" << desc->socket << " ]"
-                     << endl;
-                last_closed = desc->id;
-                close(desc->socket);
-
-                int id = desc->id;
-                auto new_end = std::remove_if(newsockfd.begin(), newsockfd.end(),
-                                              [id](descript_socket *device) { return device->id == id; });
-                newsockfd.erase(new_end, newsockfd.end());
-
-                if (num_client > 0) num_client--;
-                break;
-            }
-            msg[n] = 0;
-            desc->message = string(msg);
-            std::lock_guard<std::mutex> guard(mt);
-            Message.push_back(desc);
-        }
-        usleep(600);
-    }
-    if (desc != NULL)
-        free(desc);
-    cerr << "exit thread: " << this_thread::get_id() << endl;
-    pthread_exit(NULL);
-
-    return 0;
+SocketServer::SocketServer() {
+    sSocket = INVALID_SOCKET;
+    memset(&this->localSin, 0, sizeof(this->localSin));
+    acceptedClients.reserve(MIN_VECTOR_SIZE);
 }
 
-int SocketServer::setup(int port, vector<int> opts) {
-    int opt = 1;
-    isonline = false;
-    last_closed = -1;
-    sockfd = socket(AF_INET, SOCK_STREAM, 0);
-    memset(&serverAddress, 0, sizeof(serverAddress));
+SocketServer::~SocketServer() {
+    close();
+}
 
-    for (unsigned int i = 0; i < opts.size(); i++) {
-        if ((setsockopt(sockfd, SOL_SOCKET, opts.size(), (char *) &opt, sizeof(opt))) < 0) {
-            cerr << "Errore setsockopt" << endl;
+
+int SocketServer::initServer(SocketServer &server, const char *ipAddr, unsigned short port) {
+    // create socket if socket invalid
+    if (server.sSocket == INVALID_SOCKET) {
+        if (server.createTcpSocket() == -1) {
             return -1;
         }
     }
-
-    serverAddress.sin_family = AF_INET;
-    serverAddress.sin_addr.s_addr = htonl(INADDR_ANY);
-    serverAddress.sin_port = htons(port);
-
-    if ((::bind(sockfd, (struct sockaddr *) &serverAddress, sizeof(serverAddress))) < 0) {
-        cerr << "Errore bind" << endl;
+    // covert ip and port to SOCKADDR_IN
+    if (server.ipAndPort2Sin(ipAddr, port, server.localSin) == -1) {
         return -1;
     }
-
-    if (listen(sockfd, 5) < 0) {
-        cerr << "Errore listen" << endl;
+    // bind the address and socket
+    if (server.bind() == -1) {
         return -1;
     }
-    num_client = 0;
-    isonline = true;
+    // shift to listen
+    if (server.listen() == -1) {
+        return -1;
+    }
     return 0;
 }
 
-void SocketServer::accepted() {
-    socklen_t sosize = sizeof(clientAddress);
-    descript_socket *so = new descript_socket;
-    so->socket = accept(sockfd, (struct sockaddr *) &clientAddress, &sosize);
-    so->id = num_client;
-    so->ip = inet_ntoa(clientAddress.sin_addr);
-    newsockfd.push_back(so);
-    cerr << "accept client[ id:" << newsockfd[num_client]->id <<
-         " ip:" << newsockfd[num_client]->ip <<
-         " handle:" << newsockfd[num_client]->socket << " ]" << endl;
-    pthread_create(&serverThread[num_client], NULL, &Task, (void *) newsockfd[num_client]);
-    isonline = true;
-    num_client++;
+int SocketServer::sendToAll(char *buf, int len) {
+    for (int i = 0; i < acceptedClients.size(); i++) {
+        if(sendToOne(i, buf, len) == -1) {
+            errexit("can't send to one\n");
+            return -1;
+        }
+    }
 }
 
-vector<descript_socket *> SocketServer::getMessage() {
-    std::lock_guard<std::mutex> guard(mt);
-    return Message;
+int SocketServer::sendToOne(int id, char *buf, int len) {
+    if(id > acceptedClients.size()) {
+        errexit("size out of vector \n");
+        return -1;
+    }
+    accepted_client acc_client= acceptedClients[id];
+    if (acc_client.aSocket == INVALID_SOCKET) {
+        errexit("can't send entry: %d\n", GetLastError());
+        return -1;
+    }
+    if (len <= BUFF_SIZE) {
+        if (::send(acc_client.aSocket, buf, len, 0) == SOCKET_ERROR) {
+            errexit("can't send entry: %d\n", GetLastError());
+            return -1;
+        }
+    } else {
+        int idx = 0;
+        for (; idx < len - BUFF_SIZE; idx += BUFF_SIZE) {
+            if (::send(acc_client.aSocket, buf + idx, BUFF_SIZE, 0) == SOCKET_ERROR) {
+                errexit("can't send entry: %d\n", GetLastError());
+                return -1;
+            }
+        }
+        if (::send(acc_client.aSocket, buf + idx, len - idx, 0) == SOCKET_ERROR) {
+            errexit("can't send entry: %d\n", GetLastError());
+            return -1;
+        }
+    }
+    return 0;
+}
 }
 
-void SocketServer::Send(string msg, int id) {
-    send(newsockfd[id]->socket, msg.c_str(), msg.length(), 0);
+int SocketServer::recvFromOne(int id, char *buf, int len) {
+    if(id > acceptedClients.size()) {
+        errexit("size out of vector \n");
+        return -1;
+    }
+    accepted_client acc_client= acceptedClients[id];
+    if (acc_client.aSocket == INVALID_SOCKET) {
+        errexit("can't recv entry: %d\n", GetLastError());
+        return -1;
+    }
+    memset(buf, 0, len);
+    if (::recv(acc_client.aSocket, buf, len, 0) == SOCKET_ERROR) {
+        errexit("can't recv entry: %d\n", GetLastError());
+        return -1;
+    } else {
+        return 0;
+    }
+    return 0;
 }
 
-int SocketServer::get_last_closed_sockets() {
-    return last_closed;
+int SocketServer::accept() {
+    accepted_client accClient;
+    int len = sizeof(accClient);
+    accClient.aSocket = ::accept(this->sSocket, (struct sockaddr*)&accClient.sSin, &len);
+    if (accClient.aSocket == INVALID_SOCKET) {
+        errexit("accept failed: %d\n", GetLastError());
+        return -1;
+    }
+    this->acceptedClients.push_back(accClient);
+    return 0;
 }
 
-void SocketServer::clean(int id) {
-    Message[id]->message = "";
-    memset(msg, 0, MAXPACKETSIZE);
+int SocketServer::detach(int id) {
+    if(id > acceptedClients.size()) {
+        errexit("size out of vector \n");
+        return -1;
+    }
+    accepted_client accClient = acceptedClients[id];
+    if(::close(accClient.aSocket) == -1) {
+        errexit("can't close socket: %d\n", GetLastError());
+        return -1;
+    }
+    // remove this client
+    vector<accepted_client>::iterator it = acceptedClients.begin();
+    for (; it != it + id; it++);
+    acceptedClients.erase(it);
+    return 0;
 }
 
-string SocketServer::get_ip_addr(int id) {
-    return newsockfd[id]->ip;
+int SocketServer::clean() {
+    for(accepted_client accClient : acceptedClients) {
+        if(::close(accClient.aSocket) == -1) {
+            errexit("can't close socket: %d\n", GetLastError());
+            return -1;
+        }
+    }
+    acceptedClients.empty();
+    return 0;
 }
 
-bool SocketServer::is_online() {
-    return isonline;
+int SocketServer::close() {
+    if (clean() == -1) {
+        return -1;
+    }
+    if (::close(this->sSocket) == -1) {
+        errexit("can't close socket: %d\n", GetLastError());
+        return -1;
+    }
+    return 0;
 }
 
-void SocketServer::detach(int id) {
-    close(newsockfd[id]->socket);
-    newsockfd[id]->ip = "";
-    newsockfd[id]->id = -1;
-    newsockfd[id]->message = "";
+int SocketServer::ipAndPort2Sin(const char *ipAddr, unsigned short port, SOCKADDR_IN &sin) {
+    sin.sin_family = AF_INET;
+    // Map ipAddr to IP address
+    if ((sin.sin_addr.S_un.S_addr = inet_addr(ipAddr)) == INADDR_NONE) {
+        errexit("can't get \"%s\" ipAddr entry: %d\n", ipAddr, GetLastError());
+        return -1;
+    }
+    if ((sin.sin_port = htons((u_short) port)) == 0) {
+        errexit("can't get \"%s\" port entry: %d\n", port, GetLastError());
+        return -1;
+    }
+    return 0;
 }
 
-void SocketServer::closed() {
-    close(sockfd);
+int SocketServer::createTcpSocket() {
+    if (this->sSocket = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP) == INVALID_SOCKET) {
+        errexit("can't create socket: %d\n", GetLastError());
+        return -1;
+    }
+    return 0;
+}
+
+int SocketServer::bind() {
+    if (::bind(this->sSocket, (struct sockaddr *) &this->localSin, sizeof(this->localSin)) == SOCKET_ERROR) {
+        errexit("can't bind address: %d\n", GetLastError());
+        return -1;
+    }
+    return 0;
+}
+
+int SocketServer::listen() {
+    if (::listen(this->sSocket, 5) == SOCKET_ERROR) {
+        errexit("can't shift the state to listen : %d\n", GetLastError());
+        return -1;
+    }
+    return 0;
 }
